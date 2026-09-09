@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "types": ["node", "@playwright/test"]
+  },
+  "include": ["playwright.config.ts", "pages/**", "fixtures/**","tests/**/*.ts"]
+}
