@@ -1,7 +1,6 @@
 import { test as base } from '@playwright/test';
 import { LoginPage } from '../pages/login.page';
 import { InventoryPage } from '../pages/inventory.page';
-import { BasePage } from '../pages/base.page';
 import { CartPage } from '../pages/cart.page';
 
 // Declare the types of your fixtures

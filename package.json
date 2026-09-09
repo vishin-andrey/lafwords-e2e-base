@@ -1,14 +1,19 @@
 {
-  "name": "playwright-drill",
+  "name": "lafwords-e2e-base",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {},
+  "description": "The base e2e auto test framework for LAFwords",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Andrey Vishin",
+  "license": "MIT",
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "@types/node": "^26.1.1"
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2"
   }
 }

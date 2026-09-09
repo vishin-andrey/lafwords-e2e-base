@@ -5,5 +5,5 @@
     "target": "ES2022",
     "types": ["node", "@playwright/test"]
   },
-  "include": ["playwright.config.ts", "pages/**", "fixtures/**","tests/**/*.ts"]
+  "include": ["playwright.config.ts", "pages/**/*.ts", "fixtures/**/*.ts", "tests/**/*.ts"]
 }
