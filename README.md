@@ -2,13 +2,19 @@
 
 ![E2E](https://github.com/vishin-andrey/lafwords-e2e-base/actions/workflows/e2e.yml/badge.svg)
 
-A Playwright + TypeScript end-to-end testing base — Page Object Model, fixtures, and a CI
+A Playwright + TypeScript end-to-end testing base: Page Object Model, fixtures, and a CI
 pipeline that publishes a full HTML report on every run.
 
 It is deliberately **target-agnostic**, demonstrated here against
 [saucedemo.com](https://www.saucedemo.com/), a public sandbox published by Sauce Labs for
-exactly this purpose. It is also the foundation for [LAFwords](https://lafwords.com)' private E2E suite, which runs
-against a Firebase emulator stack and is not public.
+exactly this purpose. Swapping the target means replacing the page objects and test data, not
+the structure around them.
+
+This solution illustrates the core principles behind the E2E test suite for
+[LAFwords](https://lafwords.com) - a language-learning product I launched in 2026. Unlike this
+demo, the LAFwords E2E approach centers on a local Firebase emulator stack (to ensure
+determinism) and a staging environment - never production, where processes like payments and
+content generation entail real-world side effects.
 
 ---
 
@@ -24,7 +30,7 @@ npm run report              # open the HTML report
 | Script | What it does |
 |---|---|
 | `npm test` | run every test, all configured browsers |
-| `npm run typecheck` | `tsc --noEmit` — type-checks specs, pages and fixtures |
+| `npm run typecheck` | `tsc --noEmit`  type-checks specs, pages and fixtures |
 | `npm run report` | open the last HTML report |
 
 Run a subset:
@@ -39,15 +45,15 @@ npx playwright test --debug               # step through with the inspector
 
 ## What's covered
 
-| Test | Verifies |
-|---|---|
-| Login happy path | valid credentials reach the inventory page |
-| Login empty password | the correct validation message is shown |
-| Login empty username | the correct validation message is shown |
-| Add items to cart | items added, cart badge count, cart contents, removal |
+| Suite | Test | Verifies |
+|---|---|---|
+| Login | signs a valid user in to the inventory page | valid credentials reach the inventory page |
+| Login | rejects an empty password | the correct validation message is shown |
+| Login | rejects an empty username | the correct validation message is shown |
+| Cart | reflects items added and removed | items added, cart badge count, cart contents, removal |
 
 Four tests is a starting point, not a claim of coverage. The point of this repository is the
-**structure** the tests sit in — see [Testing strategy](#testing-strategy) and
+**structure** the tests sit in - see [Testing strategy](#testing-strategy) and
 [Roadmap](#roadmap).
 
 ---
@@ -55,20 +61,23 @@ Four tests is a starting point, not a claim of coverage. The point of this repos
 ## Project structure
 
 ```
-pages/           Page objects — locators and actions, one per meaningful screen
+pages/           Page objects - locators and actions, one per meaningful screen
   base.page.ts     shared header/cart elements
   login.page.ts
   inventory.page.ts
   cart.page.ts
 fixtures/        Custom Playwright fixtures that inject page objects into tests
-tests/           Specs
+tests/
+  auth.setup.ts    signs in once and saves the session (drives the `setup` project)
+  login.spec.ts
+  cart.spec.ts
 .github/workflows/e2e.yml   CI pipeline
 ```
 
 A test never constructs a page object itself. Fixtures do it:
 
 ```ts
-test('Login happy path', async ({ loginPage, inventoryPage }) => {
+test('signs a valid user in to the inventory page', async ({ loginPage, inventoryPage }) => {
   await loginPage.login(username, password);
   await inventoryPage.assertIsOpened();
 });
@@ -97,7 +106,7 @@ belongs elsewhere:
 
 The practical test: if a failure here could have been caught by a cheaper test, the coverage is
 in the wrong place. A suite that tries to E2E everything becomes slow and flaky, and a flaky
-suite gets ignored — which is worse than no suite at all.
+suite gets ignored - which is worse than no suite at all.
 
 ### Target under test
 
@@ -106,7 +115,7 @@ saucedemo was chosen over a toy app because it offers a real multi-page authenti
 which make it possible to demonstrate defect detection rather than only happy paths.
 
 **On the credentials in this repository:** saucedemo's usernames and password are printed on
-its own login page — they are public fixtures, not secrets. Real credentials belong in CI
+its own login page - they are public fixtures, not secrets. Real credentials belong in CI
 secrets and never in source control. This repository has none to protect, and stores none.
 
 ### Locator strategy
@@ -114,13 +123,13 @@ secrets and never in source control. This repository has none to protect, and st
 Brittle selectors are the single largest cause of flaky E2E suites, so locators follow a strict
 order of preference:
 
-1. **Role and accessible name** — `getByRole('textbox', { name: 'Username' })`. Closest to how
+1. **Role and accessible name** - `getByRole('textbox', { name: 'Username' })`. Closest to how
    a user perceives the page, and it fails loudly when accessibility regresses.
-2. **The application's own test hooks** — saucedemo exposes `data-test` attributes. Where an app
+2. **The application's own test hooks** - saucedemo exposes `data-test` attributes. Where an app
    publishes a testing contract, using it is correct: it is explicitly stable, unlike markup or
    copy.
-3. **Text content** — readable, but couples tests to copy and breaks under localisation.
-4. **CSS / XPath structure** — last resort; breaks on any refactor.
+3. **Text content** - readable, but couples tests to copy and breaks under localization.
+4. **CSS / XPath structure** - last resort; breaks on any refactor.
 
 Where an element is only identifiable in context, locators are **composed** rather than made
 more specific:
@@ -132,8 +141,8 @@ this.page
   .getByRole('button', { name: 'Add to cart' });
 ```
 
-That reads the way a person would describe the target — *the "Add to cart" button in the row for
-this item* — and survives reordering, restyling, and added columns.
+That reads the way a person would describe the target - *the "Add to cart" button in the row for
+this item* - and survives reordering, restyling, and added columns.
 
 ### Determinism
 
@@ -146,8 +155,8 @@ expect(await page.locator('h1').isVisible()).toBe(true);  // snapshot — races 
 await expect(page.getByRole('heading')).toBeVisible();     // retries — deterministic
 ```
 
-`expect.soft()` is used where several independent facts are checked in one test — form
-validation, for example — so one failure still reports the others instead of hiding them behind
+`expect.soft()` is used where several independent facts are checked in one test - form
+validation, for example - so one failure still reports the others instead of hiding them behind
 the first.
 
 ### Test data and isolation
@@ -156,24 +165,33 @@ Tests are independent and parallel-safe (`fullyParallel: true`): each owns its s
 depends on another having run first. Where the target's fixed catalogue makes shared data
 unavoidable, tests act on distinct items rather than sharing one.
 
-### Authentication — current limitation
+### Authentication
 
-Every test currently logs in through the UI. That is honest but not ideal: it is slow, and it
-couples unrelated tests to the login flow, so a broken login turns one clear failure into many
-confusing ones.
+Logging in through the UI in every test is slow, and it couples unrelated tests to the login
+flow: a broken login turns one clear failure into several confusing ones. So authentication
+happens **once**, in a setup project (`tests/auth.setup.ts`) that signs in and saves the browser
+session to `playwright/.auth/`. Every browser project declares `dependencies: ['setup']` and
+starts already authenticated.
 
-The fix is to authenticate **once** in a setup project and reuse the session via Playwright's
-`storageState`, with login tests explicitly opting out
-(`test.use({ storageState: { cookies: [], origins: [] } })`) — a browser that is already signed
-in cannot prove that signing in works. See [Roadmap](#roadmap).
+Login tests are the exception. They explicitly start from a clean session
+(`test.use({ storageState: { cookies: [], origins: [] } })`), because a browser that is already
+signed in cannot prove that signing in works.
+
+The saved session is both a credential and a generated artifact, so it is gitignored and
+rebuilt on every run — including in CI, where the runner starts empty and staleness is
+impossible.
+
+**The trade-off:** the setup project is a shared dependency. When it fails, dependent tests are
+reported as skipped with a stated reason rather than failing with invented symptoms — one clear
+root cause instead of several misleading ones. Decoupling further would mean authenticating
+through the API rather than the UI, trading realism for isolation.
 
 ### Cross-browser policy
 
-Chromium, Firefox and WebKit are configured. **CI runs Chromium only**, deliberately: the
+Chromium, Firefox and WebKit all run locally. **CI runs Chromium only**, deliberately: the
 overwhelming majority of regressions are application bugs that reproduce everywhere, and paying
 triple the CI minutes on every commit to catch a rare engine-specific issue is a poor trade.
-The other two run locally, and are the right candidates for a scheduled nightly job as the suite
-grows.
+Firefox and WebKit are the right candidates for a scheduled nightly job as the suite grows.
 
 ### Diagnosing failures
 
@@ -223,8 +241,6 @@ retries).
 
 Known gaps, in the order I would close them:
 
-- **Session reuse** — authenticate once in a setup project via `storageState`; login tests opt
-  out explicitly.
 - **Test tagging** — `@smoke` / `@regression`, so pull requests run the critical path and the
   full suite runs on a schedule.
 - **`test.step()`** — group actions so the report reads as a narrative rather than a list of

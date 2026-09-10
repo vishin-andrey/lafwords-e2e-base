@@ -11,7 +11,7 @@ test.describe('Login', () => {
     await loginPage.openLoginPage();
   });
 
-  test('signs a valid user in to the inventory page', async ({loginPage, inventoryPage}) => {
+  test('signs a valid user in to the inventory page', { tag: '@smoke' }, async ({loginPage, inventoryPage}) => {
     await loginPage.login(usernameCorrect, passwordCorrect);
     await inventoryPage.assertIsOpened();
   })
