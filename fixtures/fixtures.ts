@@ -3,7 +3,6 @@ import { LoginPage } from '../pages/login.page';
 import { InventoryPage } from '../pages/inventory.page';
 import { CartPage } from '../pages/cart.page';
 
-// Declare the types of your fixtures
 type Pages = {
   loginPage: LoginPage;
   inventoryPage: InventoryPage;

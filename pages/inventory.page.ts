@@ -6,6 +6,10 @@ export class InventoryPage extends BasePage{
     super(page);
   }
 
+  async openInventoryPage() {
+    await this.page.goto('/inventory.html');
+  }
+
   getAddToCartButtonByName(itemName: string): Locator {
     return this.page
       .locator('[data-test="inventory-item"]')
