@@ -32,7 +32,8 @@ jobs:
         run: npx playwright test --project=chromium
 
       - name: Upload report
-        if: always()
+        # Not always(): that would still upload after someone cancels the run.
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
